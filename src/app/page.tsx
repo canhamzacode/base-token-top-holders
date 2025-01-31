@@ -3,21 +3,32 @@ import { useState } from 'react';
 import { getTopHolders } from './actions/getTopHolders';
 
 export default function TopHolders() {
-  const [contractAddress, setContractAddress] = useState('0xE3086852A4B125803C815a158249ae468A3254Ca'); // Replace with your contract address
+  const [contractAddress, setContractAddress] = useState('0xE3086852A4B125803C815a158249ae468A3254Ca');
   const [holders, setHolders] = useState<{ address: string; balance: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFetchHolders = async () => {
-    if (!contractAddress) return;
+    if (!contractAddress) {
+      setError('Contract address is required');
+      return;
+    }
+
+    // Validate EVM address format
+    if (!/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
+      setError('Invalid contract address. It must be a valid EVM address (0x followed by 40 hex characters).');
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setHolders([]);
 
     try {
       const data = await getTopHolders(contractAddress);
       setHolders(data);
     } catch (err) {
-      setError('Failed to fetch top holders');
+      setError('Failed to fetch top holders. Please check the contract address and try again.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -32,7 +43,10 @@ export default function TopHolders() {
           type="text"
           placeholder="Enter ERC20 Contract Address"
           value={contractAddress}
-          onChange={(e) => setContractAddress(e.target.value)}
+          onChange={(e) => {
+            setContractAddress(e.target.value);
+            setError(null); // Clear error when user starts typing
+          }}
           className="p-2 border rounded w-full"
         />
         <button
